@@ -21,7 +21,8 @@ var gulp    = require('gulp'),                 //基础库
     revCollector = require('gulp-rev-collector'),
     changed = require('gulp-changed'),
     runSequence = require('run-sequence'),
-    del = require('del');
+    del = require('del'),
+    cache = require('gulp-cached');
 
 // HTML处理
 gulp.task('html', function() {
@@ -30,6 +31,7 @@ gulp.task('html', function() {
 
     return gulp.src(htmlSrc)
         // .pipe(livereload(server))
+        .pipe(cache('htmling'))
         .pipe(gulp.dest(htmlDst));
 });
 
@@ -46,6 +48,7 @@ gulp.task('css', function () {
         // .pipe(minifycss())
         .pipe(rev())
         // .pipe(livereload(server))
+        .pipe(cache('cssing'))
         .pipe(gulp.dest(cssDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/css'));
@@ -60,6 +63,7 @@ gulp.task('images', function(){
         .pipe(imagemin())
         .pipe(rev())
         // .pipe(livereload(server))
+        .pipe(cache('imging'))
         .pipe(gulp.dest(imgDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/images'));;
@@ -76,6 +80,7 @@ gulp.task('js', function () {
         // .pipe(uglify())
         .pipe(rev())
         // .pipe(livereload(server))
+        .pipe(cache('jsing'))
         .pipe(gulp.dest(jsDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/js'));
@@ -92,6 +97,7 @@ gulp.task('vendor', function() {
 
     // return gulp.src(vendorSrc)
     //     .pipe(concat('vendor.js'))
+    //     .pipe(cache('vendoring'))
     //     .pipe(rename({ suffix: '.min' }))
     //     // .pipe(uglify())
     //     .pipe(rev())
@@ -133,8 +139,8 @@ gulp.task('watch',function(){
 
     livereload.listen();
 
-    gulp.watch(['./src/*.html', './src/less/*.less', './src/images/**/*.*', './src/js/*.js'], function(){
-        gulp.run('rev');
+    gulp.watch(['src/*.html', 'src/less/*.less', 'src/images/**/*.*', 'src/js/*.js'], ['htmling, cssing, jsing, imging, vendoring'], function(){
+        gulp.watch('rev');
         // livereload.changed(file.path);
     })
 
