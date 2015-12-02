@@ -21,8 +21,8 @@ var gulp    = require('gulp'),                 //基础库
     revCollector = require('gulp-rev-collector'),
     changed = require('gulp-changed'),
     runSequence = require('run-sequence'),
-    del = require('del'),
-    cache = require('gulp-cached');
+    gulpSequence = require('gulp-sequence'),
+    del = require('del');
 
 // HTML处理
 gulp.task('html', function() {
@@ -30,8 +30,8 @@ gulp.task('html', function() {
         htmlDst = './dist/';
 
     return gulp.src(htmlSrc)
+        .pipe(changed(htmlDst))
         // .pipe(livereload(server))
-        .pipe(cache('htmling'))
         .pipe(gulp.dest(htmlDst));
 });
 
@@ -48,7 +48,6 @@ gulp.task('css', function () {
         // .pipe(minifycss())
         .pipe(rev())
         // .pipe(livereload(server))
-        .pipe(cache('cssing'))
         .pipe(gulp.dest(cssDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/css'));
@@ -60,10 +59,10 @@ gulp.task('images', function(){
         imgDst = './dist/images';
 
     return gulp.src(imgSrc)
+        .pipe(changed(imgDst))
         .pipe(imagemin())
         .pipe(rev())
         // .pipe(livereload(server))
-        .pipe(cache('imging'))
         .pipe(gulp.dest(imgDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/images'));;
@@ -80,7 +79,6 @@ gulp.task('js', function () {
         // .pipe(uglify())
         .pipe(rev())
         // .pipe(livereload(server))
-        .pipe(cache('jsing'))
         .pipe(gulp.dest(jsDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/js'));
@@ -88,26 +86,25 @@ gulp.task('js', function () {
 
 //vendor处理
 gulp.task('vendor', function() {
-    // var baseSrc = './node_modules';
-    //     vendorSrc = [
-    //         './node_modules/html5shiv/src/html5shiv.js',
-    //         './node_modules/jquery/dist/jquery.js'
-    //     ],
-    //     vendorDst = './dist/js';
+    var baseSrc = './node_modules';
+        vendorSrc = [
+            './node_modules/html5shiv/src/html5shiv.js',
+            './node_modules/jquery/dist/jquery.js'
+        ],
+        vendorDst = './dist/js';
 
-    // return gulp.src(vendorSrc)
-    //     .pipe(concat('vendor.js'))
-    //     .pipe(cache('vendoring'))
-    //     .pipe(rename({ suffix: '.min' }))
-    //     // .pipe(uglify())
-    //     .pipe(rev())
-    //     .pipe(gulp.dest(vendorDst))
-    //     .pipe(rev.manifest())
-    //     .pipe(gulp.dest('./rev/vendor'));
+    return gulp.src(vendorSrc)
+        .pipe(concat('vendor.js'))
+        .pipe(rename({ suffix: '.min' }))
+        // .pipe(uglify())
+        .pipe(rev())
+        .pipe(gulp.dest(vendorDst))
+        .pipe(rev.manifest())
+        .pipe(gulp.dest('./rev/vendor'));
 })
 
 //md5文件名替换
-gulp.task('rev', ['html', 'css', 'js', 'images', 'vendor'], function() {
+gulp.task('rev', function() {
 
     return gulp.src(['./rev/**/*.json', './src/*.html'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
         .pipe(revCollector({                                //- 执行文件内的替换
@@ -123,26 +120,53 @@ gulp.task('boilerplate', function() {
 
 // 清空图片、样式、js、rev
 gulp.task('clean', function() {
-    return gulp.src(['./dist/*.html','./dist/css/*.css', './dist/js/*.js', './dist/images/**/*', './rev/**/*'], {read: false})
+    return gulp.src(['./dist/*.html','./dist/css/**/*', './dist/js/*', './dist/images/**/*', './rev/**/*'], {read: false})
         .pipe(clean());
 });
 
 // 默认任务 清空图片、样式、js并重建 运行语句 gulp
-gulp.task('default', ['clean'], function(){
-    gulp.start('html', 'css','images','js', 'vendor', 'rev');
+gulp.task('default', function(cb){
+    gulpSequence(
+        'clean',
+        'html',
+        'css',
+        'images',
+        'js',
+        'vendor',
+        'rev',
+        cb
+    );
 });
+
+
+gulp.task('g-css', function(cb) {
+    gulpSequence('css', 'rev', cb);
+})
+
+gulp.task('g-js', function(cb) {
+    gulpSequence('js', 'vendor', 'rev', cb);
+})
+
+gulp.task('g-html', function(cb) {
+    gulpSequence('html', 'rev', cb);
+})
+
+gulp.task('g-img', function(cb) {
+    gulpSequence('images', 'rev', cb);
+})
 
 // 监听任务 运行语句 gulp watch
 gulp.task('watch',function(){
 
-    gulp.run('default');
+    // livereload.listen();
 
-    livereload.listen();
+    gulp.watch('src/*.html', ['g-html']);
 
-    gulp.watch(['src/*.html', 'src/less/*.less', 'src/images/**/*.*', 'src/js/*.js'], ['htmling, cssing, jsing, imging, vendoring'], function(){
-        gulp.watch('rev');
-        // livereload.changed(file.path);
-    })
+    gulp.watch('src/js/**/*.js', ['g-js']);
+
+    gulp.watch('src/less/**/*.less', ['g-css']);
+
+    gulp.watch('src/images/**/*', ['g-img']);
 
 });
 
