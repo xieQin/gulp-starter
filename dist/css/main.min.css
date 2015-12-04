@@ -45,3 +45,15 @@ a {
 .hidden {
   display: none;
 }
+.tl {
+  text-align: left;
+}
+.tr {
+  text-align: right;
+}
+.tc {
+  text-align: center;
+}
+.ml75 {
+  margin-left: 75px;
+}

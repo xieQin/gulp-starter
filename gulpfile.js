@@ -1,6 +1,6 @@
 /**
  * 组件安装
- * npm install gulp-util gulp-imagemin gulp-less gulp-minify-css gulp-jshint gulp-uglify gulp-rename gulp-concat gulp-clean gulp-livereload tiny-lr gulp-rev-collector gulp-rev --save-dev
+ * npm install
  */
 
  // 引入 gulp及组件
@@ -12,17 +12,14 @@ var gulp    = require('gulp'),                 //基础库
     uglify  = require('gulp-uglify'),          //js压缩
     rename = require('gulp-rename'),           //重命名
     concat  = require('gulp-concat'),          //合并文件
-    clean = require('gulp-clean'),             //清空文件夹
-    tinylr = require('tiny-lr'),               //livereload
-    server = tinylr(),
-    port = 35729,
     rev = require('gulp-rev'),                 //md5
-    livereload = require('gulp-livereload'),   //livereload
     revCollector = require('gulp-rev-collector'),
     changed = require('gulp-changed'),
-    runSequence = require('run-sequence'),
     gulpSequence = require('gulp-sequence'),
-    del = require('del');
+    del = require('del'),
+    spritesmith = require('gulp.spritesmith'),
+    optimize = require('gulp-htmloptimize'),
+    htmlmin = require('gulp-htmlmin');
 
 // HTML处理
 gulp.task('html', function() {
@@ -31,7 +28,17 @@ gulp.task('html', function() {
 
     return gulp.src(htmlSrc)
         .pipe(changed(htmlDst))
-        // .pipe(livereload(server))
+        .pipe(gulp.dest(htmlDst));
+});
+
+gulp.task('g-html', function() {
+    var htmlSrc = './dist/*.html',
+        htmlDst = './build/';
+
+    return gulp.src(htmlSrc)
+        .pipe(changed(htmlDst))
+        .pipe(optimize())
+        .pipe(htmlmin({collapseWhitespace: true}))
         .pipe(gulp.dest(htmlDst));
 });
 
@@ -45,13 +52,32 @@ gulp.task('css', function () {
         .pipe(concat('main.css'))
         .pipe(gulp.dest('./src/css'))
         .pipe(rename({ suffix: '.min' }))
-        // .pipe(minifycss())
+        .pipe(gulp.dest(cssDst))
+});
+
+gulp.task('g-css', function () {
+    var cssSrc = './dist/css/*.css',
+        cssDst = './build/css';
+
+    return gulp.src(cssSrc)
+        .pipe(minifycss())
         .pipe(rev())
-        // .pipe(livereload(server))
         .pipe(gulp.dest(cssDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/css'));
 });
+
+gulp.task('sprites', function() {
+    var data =
+        gulp.src('./src/images/icons/*.png')
+            .pipe(spritesmith({
+                cssName: 'sprites.css',
+                imgName: '../images/sprites.png',
+            }));
+
+    data.img.pipe(gulp.dest('./dist/images/'));
+    data.css.pipe(gulp.dest('./dist/css'));
+})
 
 //图片处理
 gulp.task('images', function(){
@@ -60,9 +86,16 @@ gulp.task('images', function(){
 
     return gulp.src(imgSrc)
         .pipe(changed(imgDst))
+        .pipe(gulp.dest(imgDst))
+})
+
+gulp.task('g-images', function(){
+    var imgSrc = './dist/images/**/*',
+        imgDst = './build/images';
+
+    return gulp.src(imgSrc)
         .pipe(imagemin())
         .pipe(rev())
-        // .pipe(livereload(server))
         .pipe(gulp.dest(imgDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/images'));;
@@ -76,9 +109,16 @@ gulp.task('js', function () {
     return gulp.src(jsSrc)
         .pipe(concat('main.js'))
         .pipe(rename({ suffix: '.min' }))
-        // .pipe(uglify())
+        .pipe(gulp.dest(jsDst))
+});
+
+gulp.task('g-js', function () {
+    var jsSrc = './dist/js/**/*.js',
+        jsDst ='./build/js';
+
+    return gulp.src(jsSrc)
+        .pipe(uglify())
         .pipe(rev())
-        // .pipe(livereload(server))
         .pipe(gulp.dest(jsDst))
         .pipe(rev.manifest())
         .pipe(gulp.dest('./rev/js'));
@@ -96,32 +136,43 @@ gulp.task('vendor', function() {
     return gulp.src(vendorSrc)
         .pipe(concat('vendor.js'))
         .pipe(rename({ suffix: '.min' }))
-        // .pipe(uglify())
-        .pipe(rev())
         .pipe(gulp.dest(vendorDst))
-        .pipe(rev.manifest())
-        .pipe(gulp.dest('./rev/vendor'));
 })
 
 //md5文件名替换
-gulp.task('rev', function() {
+gulp.task('rev-html', function() {
 
-    return gulp.src(['./rev/**/*.json', './src/*.html'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
+    return gulp.src(['./rev/**/*.json', './build/*.html'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
         .pipe(revCollector({                                //- 执行文件内的替换
             replaceReved: true
-        }))                                             
-        .pipe(gulp.dest('./dist'));                         //- 替换后的文件输出的目录 
+        }))
+        .pipe(gulp.dest('./build'));                         //- 替换后的文件输出的目录
 });
 
-gulp.task('boilerplate', function() {
-    return gulp.src(['./src/*.txt'])
-        .pipe(gulp.dest('./dist'));
-})
+gulp.task('rev-css', function() {
+
+    return gulp.src(['./rev/images/*.json', './build/css/*.*'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
+        .pipe(revCollector({                                //- 执行文件内的替换
+            replaceReved: true
+        }))
+        .pipe(gulp.dest('./build/css'));                         //- 替换后的文件输出的目录
+});
 
 // 清空图片、样式、js、rev
 gulp.task('clean', function() {
-    return gulp.src(['./dist/*.html','./dist/css/**/*', './dist/js/*', './dist/images/**/*', './rev/**/*'], {read: false})
-        .pipe(clean());
+    return del([
+        './dist/*.html',
+        './dist/css/**/*',
+        './dist/js/*',
+        './dist/images/**/*'
+    ]);
+});
+
+gulp.task('g-clean', function() {
+    return del([
+        './rev/**/*',
+        './build/**/*.*'
+    ]);
 });
 
 // 默认任务 清空图片、样式、js并重建 运行语句 gulp
@@ -131,45 +182,44 @@ gulp.task('default', function(cb){
         'html',
         'css',
         'images',
+        'sprites',
         'js',
         'vendor',
-        'rev',
         cb
     );
 });
-
-
-gulp.task('g-css', function(cb) {
-    gulpSequence('css', 'rev', cb);
-})
-
-gulp.task('g-js', function(cb) {
-    gulpSequence('js', 'vendor', 'rev', cb);
-})
-
-gulp.task('g-html', function(cb) {
-    gulpSequence('html', 'rev', cb);
-})
-
-gulp.task('g-img', function(cb) {
-    gulpSequence('images', 'rev', cb);
-})
 
 // 监听任务 运行语句 gulp watch
 gulp.task('watch',function(){
 
     // livereload.listen();
 
-    gulp.watch('src/*.html', ['g-html']);
+    gulp.watch('src/*.html', ['html']);
 
-    gulp.watch('src/js/**/*.js', ['g-js']);
+    gulp.watch('src/js/**/*.js', ['js']);
 
-    gulp.watch('src/less/**/*.less', ['g-css']);
+    gulp.watch('src/less/**/*.less', ['css']);
 
-    gulp.watch('src/images/**/*', ['g-img']);
+    gulp.watch('src/images/**/*.png', function(cb) {
+        gulpSequence(
+            'images',
+            'sprites',
+            cb
+        )
+    });
 
 });
 
-gulp.task('bulid', function() {
-
+gulp.task('build', function(cb) {
+    gulpSequence(
+        'default',
+        'g-clean',
+        'g-html',
+        'g-css',
+        'g-images',
+        'g-js',
+        'rev-html',
+        'rev-css',
+        cb
+    );
 })
