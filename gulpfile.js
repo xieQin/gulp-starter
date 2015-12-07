@@ -33,7 +33,7 @@ gulp.task('html', function() {
 
 gulp.task('g-html', function() {
     var htmlSrc = './dist/*.html',
-        htmlDst = './build/';
+        htmlDst = './public/';
 
     return gulp.src(htmlSrc)
         .pipe(changed(htmlDst))
@@ -57,7 +57,7 @@ gulp.task('css', function () {
 
 gulp.task('g-css', function () {
     var cssSrc = './dist/css/*.css',
-        cssDst = './build/css';
+        cssDst = './public/css';
 
     return gulp.src(cssSrc)
         .pipe(minifycss())
@@ -91,7 +91,7 @@ gulp.task('images', function(){
 
 gulp.task('g-images', function(){
     var imgSrc = './dist/images/**/*',
-        imgDst = './build/images';
+        imgDst = './public/images';
 
     return gulp.src(imgSrc)
         .pipe(imagemin())
@@ -114,7 +114,7 @@ gulp.task('js', function () {
 
 gulp.task('g-js', function () {
     var jsSrc = './dist/js/**/*.js',
-        jsDst ='./build/js';
+        jsDst ='./public/js';
 
     return gulp.src(jsSrc)
         .pipe(uglify())
@@ -142,20 +142,20 @@ gulp.task('vendor', function() {
 //md5文件名替换
 gulp.task('rev-html', function() {
 
-    return gulp.src(['./rev/**/*.json', './build/*.html'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
+    return gulp.src(['./rev/**/*.json', './public/*.html'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
         .pipe(revCollector({                                //- 执行文件内的替换
             replaceReved: true
         }))
-        .pipe(gulp.dest('./build'));                         //- 替换后的文件输出的目录
+        .pipe(gulp.dest('./public'));                         //- 替换后的文件输出的目录
 });
 
 gulp.task('rev-css', function() {
 
-    return gulp.src(['./rev/images/*.json', './build/css/*.*'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
+    return gulp.src(['./rev/images/*.json', './public/css/*.*'])    //- 读取 rev-manifest.json 文件以及需要进行替换的文件
         .pipe(revCollector({                                //- 执行文件内的替换
             replaceReved: true
         }))
-        .pipe(gulp.dest('./build/css'));                         //- 替换后的文件输出的目录
+        .pipe(gulp.dest('./public/css'));                         //- 替换后的文件输出的目录
 });
 
 // 清空图片、样式、js、rev
@@ -171,7 +171,7 @@ gulp.task('clean', function() {
 gulp.task('g-clean', function() {
     return del([
         './rev/**/*',
-        './build/**/*.*'
+        './public/**/*.*'
     ]);
 });
 
@@ -210,7 +210,7 @@ gulp.task('watch',function(){
 
 });
 
-gulp.task('build', function(cb) {
+gulp.task('public', function(cb) {
     gulpSequence(
         'default',
         'g-clean',
